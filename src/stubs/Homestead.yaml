@@ -20,12 +20,6 @@ sites:
 databases:
     - homestead
 
-variables:
-    - key: 'APP_ENV'
-      value: 'local'
-    - key: 'APP_DEBUG'
-      value: 'true'
-
 # blackfire:
 #     - id: foo
 #       token: bar
