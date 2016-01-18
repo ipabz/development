@@ -14,7 +14,7 @@ class Homestead
 
     # Configure The Box
     config.vm.box = settings["box"] ||= "laravel/homestead"
-    config.vm.box_version = settings["version"] ||= ">= 0"
+    config.vm.box_version = settings["version"] ||= ">= 0.4.0"
     config.vm.hostname = settings["hostname"] ||= "homestead"
 
     # Configure A Private Network IP
@@ -29,7 +29,7 @@ class Homestead
 
     # Configure A Few VirtualBox Settings
     config.vm.provider "virtualbox" do |vb|
-      vb.name = settings["name"] ||= "homestead"
+      vb.name = settings["name"] ||= "homestead-7"
       vb.customize ["modifyvm", :id, "--memory", settings["memory"] ||= "2048"]
       vb.customize ["modifyvm", :id, "--cpus", settings["cpus"] ||= "1"]
       vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
@@ -89,9 +89,11 @@ class Homestead
 
     # Configure The Public Key For SSH Access
     if settings.include? 'authorize'
-      config.vm.provision "shell" do |s|
-        s.inline = "echo $1 | grep -xq \"$1\" /home/vagrant/.ssh/authorized_keys || echo $1 | tee -a /home/vagrant/.ssh/authorized_keys"
-        s.args = [File.read(File.expand_path(settings["authorize"]))]
+      if File.exists? File.expand_path(settings["authorize"])
+        config.vm.provision "shell" do |s|
+          s.inline = "echo $1 | grep -xq \"$1\" /home/vagrant/.ssh/authorized_keys || echo $1 | tee -a /home/vagrant/.ssh/authorized_keys"
+          s.args = [File.read(File.expand_path(settings["authorize"]))]
+        end
       end
     end
 
@@ -148,10 +150,15 @@ class Homestead
       end
 
       # Configure The Cron Schedule
-      if (site.has_key?("schedule") && site["schedule"])
+      if (site.has_key?("schedule"))
         config.vm.provision "shell" do |s|
-          s.path = scriptDir + "/cron-schedule.sh"
-          s.args = [site["map"].tr('^A-Za-z0-9', ''), site["to"]]
+          if (site["schedule"])
+            s.path = scriptDir + "/cron-schedule.sh"
+            s.args = [site["map"].tr('^A-Za-z0-9', ''), site["to"]]
+          else
+            s.inline = "rm -f /etc/cron.d/$1"
+            s.args = [site["map"].tr('^A-Za-z0-9', '')]
+          end
         end
       end
 
@@ -180,7 +187,7 @@ class Homestead
     if settings.has_key?("variables")
       settings["variables"].each do |var|
         config.vm.provision "shell" do |s|
-          s.inline = "echo \"\nenv[$1] = '$2'\" >> /etc/php5/fpm/php-fpm.conf"
+          s.inline = "echo \"\nenv[$1] = '$2'\" >> /etc/php/7.0/fpm/php-fpm.conf"
           s.args = [var["key"], var["value"]]
         end
 
@@ -191,7 +198,7 @@ class Homestead
       end
 
       config.vm.provision "shell" do |s|
-        s.inline = "service php5-fpm restart"
+        s.inline = "service php7.0-fpm restart"
       end
     end
 
